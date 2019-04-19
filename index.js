@@ -30,7 +30,6 @@ const fetchTrainingData = async limit => {
     )
       .then(data => data.json())
       .then(async data => {
-        console.log(data.total_jokes);
         results.push(...data.results);
         if (results.length < limit && data.total_jokes > results.length) {
           await fetchJokes(limit, page + 1, results);
@@ -63,7 +62,12 @@ const generateSymanticMap = data => {
       symanticMap.startWordsQuestions[question[0]]
         ? symanticMap.startWordsQuestions[question[0]]++
         : (symanticMap.startWordsQuestions[question[0]] = 1);
-      let answer = (split[1].replace(".", "").replace("!", "") + ".")
+      let answer = (
+        split[1]
+          .replace(".", "")
+          .replace("!", "")
+          .trim() + "."
+      )
         .trim()
         .split(" ");
       // extract and store reply start words
@@ -121,7 +125,7 @@ const selectWord = data => {
   let random = Math.random();
   let max = { word: null, score: 0 };
   Object.keys(data).forEach(key => {
-    let randomized = Math.random() * data[key];
+    let randomized = Math.random() * Math.random() * data[key];
     if (randomized > max.score) {
       max = { word: key, score: randomized };
     }
