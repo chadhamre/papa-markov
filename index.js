@@ -13,7 +13,7 @@ const askHowMany = () => {
       name: "training",
       type: "input",
       message:
-        "How many dad jokes do you want to use for training data? (min = 100, max = 1000)"
+        "How many dad jokes do you want to use for training data? (min = 100, max = 549)"
     }
   ];
   return inquirer.prompt(questions);
@@ -30,6 +30,7 @@ const fetchTrainingData = async limit => {
     )
       .then(data => data.json())
       .then(async data => {
+        console.log(data.total_jokes);
         results.push(...data.results);
         if (results.length < limit && data.total_jokes > results.length) {
           await fetchJokes(limit, page + 1, results);
