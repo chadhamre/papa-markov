@@ -13,7 +13,7 @@ const getInput = () => {
       name: "training",
       type: "input",
       message:
-        "How many dad jokes do you want to use for training data? (min = 20, max = 1000)"
+        "How many dad jokes do you want to use for training data? (min = 100, max = 1000)"
     }
   ];
   return inquirer.prompt(questions);
@@ -21,11 +21,10 @@ const getInput = () => {
 
 const fetchTrainingData = async limit => {
   console.log("Fetching training data...");
+  limit < 100 ? (limit = 100) : limit;
   fetchJokes = async (limit, page = 1, results = []) => {
     return await fetch(
-      `https://icanhazdadjoke.com/search?limit=${
-        limit < 20 ? 20 : limit
-      }&page=${page}`,
+      `https://icanhazdadjoke.com/search?limit=${limit}&page=${page}`,
       {
         headers: { Accept: "application/json" }
       }
@@ -39,7 +38,6 @@ const fetchTrainingData = async limit => {
         return results;
       });
   };
-
   return await fetchJokes(limit);
 };
 
@@ -47,13 +45,17 @@ const generateMap = data => {
   console.log("Generating language map...");
   let map = {
     startWordsQuestions: {},
-    startWordsAnswers: {},
+    startWordsReplies: {},
     nextWordsQuestions: {},
     nextWordsAnswers: {}
   };
   data.forEach(row => {
     let split = row.joke.split("?");
-    if (split.length === 2 && row.joke.indexOf("\r\n\r\n") === -1) {
+    if (
+      split.length === 2 &&
+      row.joke.indexOf("\r\n\r\n") === -1 &&
+      row.joke.indexOf(",") === -1
+    ) {
       // extract and store start words
       let question = (split[0] + "?").split(" ");
       map.startWordsQuestions[question[0]]
@@ -62,9 +64,13 @@ const generateMap = data => {
       let answer = (split[1].replace(".", "").replace("!", "") + ".")
         .trim()
         .split(" ");
-      map.startWordsAnswers[answer[0]]
-        ? map.startWordsAnswers[answer[0]]++
-        : (map.startWordsAnswers[answer[0]] = 1);
+
+      if (!map.startWordsReplies[question[0]])
+        map.startWordsReplies[question[0]] = {};
+      map.startWordsReplies[question[0]][answer[0]]
+        ? map.startWordsReplies[question[0]][answer[0]]++
+        : (map.startWordsReplies[question[0]][answer[0]] = 1);
+
       // extract and store next words
       question.forEach((word, i) => {
         if (question[i + 1]) {
@@ -97,7 +103,7 @@ const generateJoke = map => {
       selectWord(map.nextWordsQuestions[newJoke[newJoke.length - 1]])
     );
   }
-  newJoke.push(selectWord(map.startWordsAnswers));
+  newJoke.push(selectWord(map.startWordsReplies[newJoke[0]]));
   while (newJoke[newJoke.length - 1].indexOf(".") === -1) {
     newJoke.push(selectWord(map.nextWordsAnswers[newJoke[newJoke.length - 1]]));
   }
@@ -129,7 +135,7 @@ const askForMore = async map => {
     }
   ];
   let response = await inquirer.prompt(questions);
-  if (response.more === "y" || response.more === "Y") {
+  if (response.more === "y" || response.more === "Y" || response.more === "") {
     generateJoke(map);
     await askForMore(map);
   }
