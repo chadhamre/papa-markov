@@ -1,13 +1,13 @@
 const inquirer = require("inquirer");
-const figlet = require("figlet");
-const shell = require("shelljs");
 const fetch = require("node-fetch");
 
-const welcomeMessage = () => {
+// function to display welcome message
+const displayWelcomeMessage = () => {
   console.log("Welcome to the Dad Joke Generator");
 };
 
-const getInput = () => {
+// function to prompt the user to chose how much training data to use
+const askHowMany = () => {
   const questions = [
     {
       name: "training",
@@ -19,15 +19,14 @@ const getInput = () => {
   return inquirer.prompt(questions);
 };
 
+// function to fetch paginated data
 const fetchTrainingData = async limit => {
   console.log("Fetching training data...");
   limit < 100 ? (limit = 100) : limit;
   fetchJokes = async (limit, page = 1, results = []) => {
     return await fetch(
       `https://icanhazdadjoke.com/search?limit=${limit}&page=${page}`,
-      {
-        headers: { Accept: "application/json" }
-      }
+      { headers: { Accept: "application/json" } }
     )
       .then(data => data.json())
       .then(async data => {
@@ -41,61 +40,65 @@ const fetchTrainingData = async limit => {
   return await fetchJokes(limit);
 };
 
-const generateMap = data => {
+// function to generate symantic map
+const generateSymanticMap = data => {
   console.log("Generating language map...");
-  let map = {
+  let symanticMap = {
     startWordsQuestions: {},
     startWordsReplies: {},
     nextWordsQuestions: {},
-    nextWordsAnswers: {}
+    nextWordsReplies: {}
   };
   data.forEach(row => {
     let split = row.joke.split("?");
+    // only include Q&A type jokes
     if (
       split.length === 2 &&
       row.joke.indexOf("\r\n\r\n") === -1 &&
       row.joke.indexOf(",") === -1
     ) {
-      // extract and store start words
+      // extract and store question start words
       let question = (split[0] + "?").split(" ");
-      map.startWordsQuestions[question[0]]
-        ? map.startWordsQuestions[question[0]]++
-        : (map.startWordsQuestions[question[0]] = 1);
+      symanticMap.startWordsQuestions[question[0]]
+        ? symanticMap.startWordsQuestions[question[0]]++
+        : (symanticMap.startWordsQuestions[question[0]] = 1);
       let answer = (split[1].replace(".", "").replace("!", "") + ".")
         .trim()
         .split(" ");
-
-      if (!map.startWordsReplies[question[0]])
-        map.startWordsReplies[question[0]] = {};
-      map.startWordsReplies[question[0]][answer[0]]
-        ? map.startWordsReplies[question[0]][answer[0]]++
-        : (map.startWordsReplies[question[0]][answer[0]] = 1);
-
-      // extract and store next words
+      // extract and store reply start words
+      if (!symanticMap.startWordsReplies[question[0]])
+        symanticMap.startWordsReplies[question[0]] = {};
+      symanticMap.startWordsReplies[question[0]][answer[0]]
+        ? symanticMap.startWordsReplies[question[0]][answer[0]]++
+        : (symanticMap.startWordsReplies[question[0]][answer[0]] = 1);
+      // extract and store next words for questions
       question.forEach((word, i) => {
         if (question[i + 1]) {
-          if (!map.nextWordsQuestions[word]) map.nextWordsQuestions[word] = {};
-          map.nextWordsQuestions[word][question[i + 1]]
-            ? map.nextWordsQuestions[word][question[i + 1]]++
-            : (map.nextWordsQuestions[word][question[i + 1]] = 1);
+          if (!symanticMap.nextWordsQuestions[word])
+            symanticMap.nextWordsQuestions[word] = {};
+          symanticMap.nextWordsQuestions[word][question[i + 1]]
+            ? symanticMap.nextWordsQuestions[word][question[i + 1]]++
+            : (symanticMap.nextWordsQuestions[word][question[i + 1]] = 1);
         }
       });
+      // extract and store next words for answers
       answer.forEach((word, i) => {
         if (answer[i + 1]) {
-          if (!map.nextWordsAnswers[word]) map.nextWordsAnswers[word] = {};
-          map.nextWordsAnswers[word][answer[i + 1]]
-            ? map.nextWordsAnswers[word][answer[i + 1]]++
-            : (map.nextWordsAnswers[word][answer[i + 1]] = 1);
+          if (!symanticMap.nextWordsReplies[word])
+            symanticMap.nextWordsReplies[word] = {};
+          symanticMap.nextWordsReplies[word][answer[i + 1]]
+            ? symanticMap.nextWordsReplies[word][answer[i + 1]]++
+            : (symanticMap.nextWordsReplies[word][answer[i + 1]] = 1);
         }
       });
     }
   });
-  return map;
+  return symanticMap;
 };
 
+// function to generate a new joke
 const generateJoke = map => {
   console.log("Generating joke...");
-
   let newJoke = [];
   newJoke.push(selectWord(map.startWordsQuestions));
   while (newJoke[newJoke.length - 1].indexOf("?") === -1) {
@@ -105,14 +108,14 @@ const generateJoke = map => {
   }
   newJoke.push(selectWord(map.startWordsReplies[newJoke[0]]));
   while (newJoke[newJoke.length - 1].indexOf(".") === -1) {
-    newJoke.push(selectWord(map.nextWordsAnswers[newJoke[newJoke.length - 1]]));
+    newJoke.push(selectWord(map.nextWordsReplies[newJoke[newJoke.length - 1]]));
   }
-
   console.log("-----");
   console.log(newJoke.join(" "));
   console.log("-----");
 };
 
+// function to select probabalistic random word
 const selectWord = data => {
   let random = Math.random();
   let max = { word: null, score: 0 };
@@ -122,11 +125,11 @@ const selectWord = data => {
       max = { word: key, score: randomized };
     }
   });
-
   return max.word;
 };
 
-const askForMore = async map => {
+// function to prompt the user to generate another joke
+const askForMore = async symaticMap => {
   const questions = [
     {
       name: "more",
@@ -136,19 +139,20 @@ const askForMore = async map => {
   ];
   let response = await inquirer.prompt(questions);
   if (response.more === "y" || response.more === "Y" || response.more === "") {
-    generateJoke(map);
-    await askForMore(map);
+    generateJoke(symaticMap);
+    await askForMore(symaticMap);
   }
 };
 
+// main function
 const run = async () => {
-  welcomeMessage();
-  const question = await getInput();
+  displayWelcomeMessage();
+  const volume = await askHowMany();
   console.log("-----");
-  const trainingData = await fetchTrainingData(question.training);
-  const map = generateMap(trainingData);
-  const joke = generateJoke(map);
-  await askForMore(map);
+  const trainingData = await fetchTrainingData(volume.training);
+  const semanticMap = generateSymanticMap(trainingData);
+  const joke = generateJoke(semanticMap);
+  await askForMore(semanticMap);
 };
 
 run();
