@@ -1,0 +1,18 @@
+{
+  "name": "papa-markov",
+  "version": "1.0.0",
+  "description": "dad joke generator",
+  "main": "index.js",
+  "author": "Chad Hamre",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js",
+    "develop": "nodemon index.js"
+  },
+  "dependencies": {
+    "figlet": "^1.2.1",
+    "inquirer": "^6.3.1",
+    "node-fetch": "^2.3.0",
+    "shelljs": "^0.8.3"
+  }
+}
